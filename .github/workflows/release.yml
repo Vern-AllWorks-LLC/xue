@@ -1,0 +1,148 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.2.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux-x86_64
+          - os: ubuntu-22.04-arm
+            platform: linux-aarch64
+          - os: macos-13
+            platform: macos-x86_64
+          - os: macos-latest
+            platform: macos-arm64
+          - os: windows-latest
+            platform: windows-x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ---- Optional: Python 3.14t (free-threading) --------------------------
+      - name: Install Python 3.14t (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo add-apt-repository ppa:deadsnakes/ppa -y 2>/dev/null || true
+          sudo apt-get update -qq
+          sudo apt-get install -y python3.14-nogil 2>/dev/null \
+            || echo "python3.14-nogil not yet in deadsnakes; skipping 3.14t build"
+
+      - name: Install Python 3.14t (macOS)
+        if: runner.os == 'macOS'
+        run: brew install python@3.14 2>/dev/null || echo "python@3.14 not available; skipping"
+
+      # ---- Set up MSVC for Windows extension builds -------------------------
+      - name: Set up MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      # ---- Build C extensions (Linux / macOS) -------------------------------
+      - name: Build C extensions (Linux / macOS)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist/xue
+          cp xue-modules/*.py dist/xue/
+
+          cd xue-native
+
+          ARCH=$(uname -m)
+          OS=$(uname -s)
+          case "$ARCH" in
+            x86_64|amd64) SIMD="-mavx2" ;;
+            *)             SIMD="" ;;
+          esac
+          case "$OS" in
+            Darwin) CC="${CC:-clang}"; LDFLAGS="" ;;
+            *)      CC="${CC:-gcc}";   LDFLAGS="-ldl" ;;
+          esac
+
+          build_for_python() {
+            local PYTHON="$1"
+            local LABEL="$2"
+            command -v "$PYTHON" >/dev/null 2>&1 || { echo "Skipping $LABEL (not found)"; return 0; }
+
+            INC=$($PYTHON -c "import sysconfig; print(sysconfig.get_path('include'))")
+            EXT=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+            echo "Building for $LABEL  ext=$EXT"
+
+            for src in _units_accel _autodiff_accel _tensor_accel; do
+              $CC -shared -O3 $SIMD -fPIC \
+                -I"$INC" "${src}.c" \
+                -o "../dist/xue/${src}${EXT}" \
+                -lm $LDFLAGS
+              echo "  OK: ${src}${EXT}"
+            done
+          }
+
+          build_for_python python3.12 "Python 3.12"
+          build_for_python python3.14 "Python 3.14t" || true
+
+      # ---- Build C extensions (Windows via MSVC) ----------------------------
+      - name: Build C extensions (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          mkdir dist\xue
+          copy xue-modules\*.py dist\xue\
+
+          for /f "delims=" %%i in ('python -c "import sysconfig; print(sysconfig.get_path(\"include\"))"') do set PYTHINC=%%i
+          for /f "delims=" %%i in ('python -c "import sysconfig; print(sysconfig.get_config_var(\"installed_base\"))"') do set PYTHBASE=%%i
+          for /f "delims=" %%i in ('python -c "import sysconfig; print(sysconfig.get_config_var(\"EXT_SUFFIX\"))"') do set PYEXT=%%i
+          for /f "delims=" %%i in ('python -c "import sys; print(f\"python{sys.version_info.major}{sys.version_info.minor}\")"') do set PYLIB=%%i
+
+          cd xue-native
+
+          cl /LD /O2 /nologo /I"%PYTHINC%" _units_accel.c    /Fe:"..\dist\xue\_units_accel%PYEXT%"    /link /LIBPATH:"%PYTHBASE%\libs" "%PYLIB%.lib"
+          cl /LD /O2 /nologo /I"%PYTHINC%" _autodiff_accel.c /Fe:"..\dist\xue\_autodiff_accel%PYEXT%" /link /LIBPATH:"%PYTHBASE%\libs" "%PYLIB%.lib"
+          cl /LD /O2 /nologo /I"%PYTHINC%" _tensor_accel.c   /Fe:"..\dist\xue\_tensor_accel%PYEXT%"   /link /LIBPATH:"%PYTHBASE%\libs" "%PYLIB%.lib"
+
+      # ---- Package ----------------------------------------------------------
+      - name: Package (Linux / macOS)
+        if: runner.os != 'Windows'
+        run: |
+          cp xue-guide.html xue-guide.pdf dist/ 2>/dev/null || true
+          VERSION="${GITHUB_REF_NAME:-${{ github.event.inputs.tag }}}"
+          ARCHIVE="xue-${VERSION}-${{ matrix.platform }}.tar.gz"
+          tar -czf "$ARCHIVE" -C dist .
+          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item xue-guide.html dist\ -ErrorAction SilentlyContinue
+          Copy-Item xue-guide.pdf  dist\ -ErrorAction SilentlyContinue
+          $version = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "${{ github.event.inputs.tag }}" }
+          $archive = "xue-${version}-${{ matrix.platform }}.zip"
+          Compress-Archive -Path dist\* -DestinationPath $archive
+          echo "ARCHIVE=$archive" >> $env:GITHUB_ENV
+
+      # ---- Upload to GitHub Release -----------------------------------------
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name || github.event.inputs.tag }}
+          files: ${{ env.ARCHIVE }}
+          generate_release_notes: true
