@@ -1,0 +1,32 @@
+# CPython source tarballs
+Python-3.12.13/
+Python-3.14.3/
+archives/
+
+# Install directories (built locally)
+xue-python-install/
+xue-python-install-314/
+
+# Full CPython fork (only Lib/xue/ tracked separately)
+xue-python/
+
+# Build artifacts
+*.o
+*.gcda
+*.gcno
+*.so
+*.dylib
+*.dll
+*.pyd
+*.pyc
+*.pyo
+__pycache__/
+build/
+*.egg-info/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

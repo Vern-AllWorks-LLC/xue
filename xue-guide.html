@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>xue-python User Guide - OpenCan.ai</title>
+<style>
+:root {
+    --bg-100: #0a0a0f;
+    --bg-200: #12121a;
+    --bg-300: #1a1a25;
+    --bg-400: #252532;
+    --text: #e4e4e7;
+    --text-muted: #71717a;
+    --accent: #06b6d4;
+    --accent-light: #22d3ee;
+    --btn-bg: #6366f1;
+    --btn-bg-hover: #4f46e5;
+    --border: #27272a;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
+    background: var(--bg-100);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+    display: flex;
+}
+a { color: var(--accent-light); text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { margin: 1rem 0 1rem 1.5rem; }
+li { margin-bottom: 0.5rem; }
+code {
+    background: var(--bg-300);
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    font-family: 'SFMono-Regular', Consolas, Monaco, monospace;
+    font-size: 0.9em;
+    color: #f0abfc;
+}
+pre {
+    background: var(--bg-300);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+    border: 1px solid var(--border);
+    line-height: 1.5;
+}
+pre code { background: none; padding: 0; color: #e2e8f0; }
+table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+th { background: var(--bg-200); font-weight: 600; color: var(--accent-light); }
+tr:hover { background: var(--bg-200); }
+html { scroll-behavior: smooth; }
+.sidebar {
+  width: 300px; background: var(--bg-200); position: fixed; top: 0; left: 0;
+  height: 100vh; overflow-y: auto; z-index: 100; border-right: 1px solid var(--border);
+  transition: transform 0.3s ease;
+}
+.sidebar-header {
+  padding: 24px 20px; border-bottom: 1px solid var(--border);
+  background: var(--bg-300);
+}
+.sidebar-header h1 {
+  font-size: 20px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.sidebar-header p { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.sidebar nav { padding: 12px 0; }
+.sidebar nav a {
+  display: block; padding: 8px 20px; color: var(--text-muted); text-decoration: none;
+  font-size: 13px; border-left: 3px solid transparent; transition: all 0.2s;
+}
+.sidebar nav a:hover { color: #fff; background: rgba(255,255,255,0.05); border-left-color: var(--accent); }
+.sidebar nav a.active { color: var(--accent-light); border-left-color: var(--accent); background: rgba(6, 182, 212,0.08); }
+.sidebar nav .nav-section {
+  padding: 12px 20px 4px; font-size: 10px; text-transform: uppercase;
+  letter-spacing: 1.5px; color: var(--text-muted); font-weight: 700;
+}
+.main { margin-left: 300px; flex: 1; min-width: 0; }
+.topbar {
+  position: sticky; top: 0; z-index: 50; background: var(--bg-200);
+  border-bottom: 1px solid var(--border); padding: 12px 32px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.topbar-title { font-size: 14px; color: var(--text-muted); }
+.btn-pdf {
+  background: #6366f1; color: #fff; border: none; padding: 8px 20px;
+  border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;
+  transition: opacity 0.2s;
+}
+.btn-pdf:hover { opacity: 0.85; }
+.hamburger { display: none; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; }
+.content { max-width: 900px; margin: 0 auto; padding: 32px; }
+h2 {
+  font-size: 28px; color: #fff; margin: 48px 0 16px; padding-bottom: 12px;
+  border-bottom: 2px solid var(--accent);
+}
+h2:first-of-type { margin-top: 0; }
+h3 { font-size: 20px; color: #fff; margin: 32px 0 12px; }
+h4 { font-size: 16px; color: var(--accent-light); margin: 24px 0 8px; }
+p { margin-bottom: 12px; }
+.callout {
+  border-left: 4px solid var(--accent-light); background: rgba(34, 211, 238,0.08);
+  padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0;
+}
+.callout.warning { border-left-color: var(--warning); background: rgba(245,158,11,0.08); }
+.callout.success { border-left-color: var(--success); background: rgba(16,185,129,0.08); }
+.callout.danger { border-left-color: var(--error); background: rgba(239,68,68,0.08); }
+.callout strong { color: #fff; }
+.feature-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px; margin: 16px 0;
+}
+.feature-card {
+  background: var(--bg-200); border: 1px solid var(--border); border-radius: 1rem;
+  padding: 16px; transition: border-color 0.2s;
+}
+.feature-card:hover { border-color: var(--accent); }
+.feature-card h5 { color: #fff; margin-bottom: 6px; font-size: 14px; }
+.feature-card p { font-size: 13px; color: var(--text-muted); margin: 0; }
+.perf-table td:nth-child(3),
+.perf-table td:nth-child(4) { font-family: monospace; text-align: right; }
+.perf-table td:last-child { color: var(--success); font-weight: 700; }
+footer {
+  text-align: center; padding: 32px; color: var(--text-muted);
+  font-size: 13px; border-top: 1px solid var(--border); margin-top: 48px;
+}
+footer a { color: var(--accent-light); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+@media print {
+  .sidebar, .topbar, .hamburger { display: none !important; }
+  .main { margin-left: 0 !important; }
+  body { background: #fff; color: #111; }
+  .content { max-width: 100%; padding: 0; }
+  h2 { border-bottom-color: #333; color: #111; page-break-after: avoid; }
+  h3, h4 { color: #111; page-break-after: avoid; }
+  pre { background: #f5f5f5; border-color: #ddd; color: #111; page-break-inside: avoid; }
+  code { background: #f0f0f0; color: #c00; }
+  table { page-break-inside: avoid; }
+  th { background: #333; color: #fff; }
+  td { border-bottom-color: #ddd; }
+  .callout { background: #f0f8ff; border-left-color: #333; }
+  .feature-card { background: #f9f9f9; border-color: #ddd; }
+  a { color: #0066cc; }
+  footer { display: none; }
+}
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .hamburger { display: block; }
+  .content { padding: 20px 16px; }
+  h2 { font-size: 22px; }
+  .feature-grid { grid-template-columns: 1fr; }
+}
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; }
+.overlay.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <h1>xue-python</h1>
+    <p>User Guide &mdash; v0.2.0 &mdash; March 2026</p>
+  </div>
+  <nav>
+    <div class="nav-section">Getting Started</div>
+    <a href="#introduction">Introduction</a>
+    <a href="#license">License</a>
+    <a href="#installation">Installation</a>
+    <a href="#quickstart">Quick Start</a>
+    <div class="nav-section">Type System Modules</div>
+    <a href="#mod-result">Result &amp; Option</a>
+    <a href="#mod-secret">Secret</a>
+    <a href="#mod-contracts">Contracts</a>
+    <a href="#mod-strict">Strict Typing</a>
+    <div class="nav-section">Scientific Computing</div>
+    <a href="#mod-units">Physical Units</a>
+    <a href="#mod-autodiff">Automatic Differentiation</a>
+    <a href="#mod-tensor">Tensor</a>
+    <div class="nav-section">Language Extensions</div>
+    <a href="#mod-dispatch">Multiple Dispatch</a>
+    <a href="#mod-unicode">Unicode Operators</a>
+    <a href="#mod-sandbox">Sandboxed Imports</a>
+    <a href="#mod-llmhook">LLM Integration</a>
+    <div class="nav-section">C Acceleration &amp; GPU</div>
+    <a href="#native">Native C Extensions</a>
+    <a href="#simd">SIMD Vectorization</a>
+    <a href="#cuda">CUDA GPU Support</a>
+    <a href="#benchmarks">Benchmarks</a>
+    <div class="nav-section">Reference</div>
+    <a href="#building">Building from Source</a>
+    <a href="#testing">Testing</a>
+    <a href="#api-reference">API Reference</a>
+  </nav>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>
+    <span class="topbar-title">xue-python &mdash; User Guide</span>
+    <button class="btn-pdf" onclick="window.print()">Download PDF</button>
+  </div>
+
+  <div class="content">
+
+<!-- ============================================================ -->
+<h2 id="introduction">1. Introduction</h2>
+
+<h3>What is xue-python?</h3>
+<p><strong>xue-python</strong> is an enhanced Python distribution built on CPython 3.12 and 3.14 (free-threaded), developed by <strong>OpenCan.ai</strong>. It adds a standard library of modules for scientific computing, AI/ML, robotics, and safety-critical programming that Python lacks out of the box.</p>
+
+<p>The name <em>xue</em> means "learn" in Chinese. Every module is designed for production use in research and engineering workflows.</p>
+
+<div class="feature-grid">
+  <div class="feature-card"><h5>Result &amp; Option Types</h5><p>Rust-inspired explicit error handling. No more silent None failures.</p></div>
+  <div class="feature-card"><h5>Physical Units</h5><p>SI unit system with dimension checking. Catches meters + seconds errors at runtime.</p></div>
+  <div class="feature-card"><h5>Automatic Differentiation</h5><p>Reverse-mode AD with computation graph. Gradients, Jacobians, and higher-order derivatives.</p></div>
+  <div class="feature-card"><h5>Tensor with SIMD + GPU</h5><p>Shape-checked tensors with AVX2 vectorization and optional CUDA GPU acceleration.</p></div>
+  <div class="feature-card"><h5>Design by Contract</h5><p>@requires, @ensures, @invariant decorators for preconditions and postconditions.</p></div>
+  <div class="feature-card"><h5>Secret Type</h5><p>Prevents accidental logging of API keys, tokens, and passwords.</p></div>
+  <div class="feature-card"><h5>Multiple Dispatch</h5><p>Julia-style dispatch on all argument types, not just self.</p></div>
+  <div class="feature-card"><h5>Sandboxed Imports</h5><p>Capability-based import restrictions for untrusted code.</p></div>
+  <div class="feature-card"><h5>LLM Diagnostics</h5><p>Optional AI-powered error explanations and natural language contract translation.</p></div>
+</div>
+
+<h3>Architecture</h3>
+<p>xue-python is a standard CPython fork. All existing Python packages work unchanged. The <code>xue</code> package is a standard library module (like <code>json</code> or <code>math</code>). Performance-critical modules have C extension backends that are loaded automatically when available.</p>
+
+<table>
+<tr><th>Component</th><th>Description</th></tr>
+<tr><td>Base</td><td>CPython 3.12.13 (stable) and 3.14.3 (free-threaded)</td></tr>
+<tr><td>Library</td><td><code>Lib/xue/</code> &mdash; 11 Python modules</td></tr>
+<tr><td>C Extensions</td><td><code>_units_accel.c</code>, <code>_autodiff_accel.c</code>, <code>_tensor_accel.c</code></td></tr>
+<tr><td>CUDA Kernels</td><td><code>_xue_cuda_kernels.cu</code> (optional, runtime-loaded)</td></tr>
+<tr><td>License</td><td>MIT (xue extensions) + PSF (CPython base)</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="license">2. License</h2>
+
+<ul>
+  <li><strong>xue modules</strong> (<code>Lib/xue/</code>, C extensions, CUDA kernels) &mdash; MIT License.</li>
+  <li><strong>CPython base</strong> &mdash; PSF License Agreement.</li>
+</ul>
+<p>You may use xue-python in commercial and open-source projects without restriction. See <code>LICENSE.xue</code> for the full MIT text.</p>
+
+<!-- ============================================================ -->
+<h2 id="installation">3. Installation</h2>
+
+<h3>From Pre-built Distribution</h3>
+<pre><code># Python 3.12 (stable)
+tar xzf xue-python-3.12.13-linux-x86_64.tar.gz
+export PATH="/opt/xue-python/bin:$PATH"
+python3 -c "import xue; print(xue.__version__)"
+
+# Python 3.14t (free-threaded, no GIL)
+tar xzf xue-python-3.14.3t-linux-x86_64.tar.gz
+export PATH="/opt/xue-python-314t/bin:$PATH"
+python3 -c "import xue; print(xue.__version__)"</code></pre>
+
+<h3>Building from Source</h3>
+<pre><code># Prerequisites (Ubuntu/Debian)
+sudo apt install build-essential libssl-dev libffi-dev zlib1g-dev
+# Optional: CUDA toolkit for GPU support
+sudo apt install nvidia-cuda-toolkit
+
+# Build Python 3.12 fork
+cd xue-python
+./configure --prefix=/opt/xue-python --enable-optimizations
+make -j$(nproc)
+make install
+
+# Build C extensions
+cd ../xue-native
+bash build.sh</code></pre>
+
+<h3>System Requirements</h3>
+<table>
+<tr><th>Requirement</th><th>Minimum</th><th>Recommended</th></tr>
+<tr><td>OS</td><td>Linux x86_64</td><td>Ubuntu 22.04+</td></tr>
+<tr><td>GCC</td><td>11+</td><td>13+ (for AVX2)</td></tr>
+<tr><td>CPU</td><td>x86_64 with SSE4</td><td>AVX2 capable (Haswell+)</td></tr>
+<tr><td>GPU (optional)</td><td>CUDA 11.0+</td><td>CUDA 12.0+</td></tr>
+<tr><td>RAM</td><td>512 MB</td><td>2 GB+</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="quickstart">4. Quick Start</h2>
+
+<pre><code>from xue.result import Ok, Err
+from xue.units import meters, seconds, kg
+from xue.autodiff import Variable, grad
+from xue.tensor import Tensor, float32
+
+# Physical units with dimension checking
+distance = 100 * meters
+time = 9.58 * seconds
+speed = distance / time           # Quantity(10.44..., m/s)
+# distance + time                 # DimensionError!
+
+# Automatic differentiation
+x = Variable(3.0)
+y = x ** 2 + 2 * x + 1
+y.backward()
+print(f"dy/dx at x=3: {x.grad}")  # 8.0
+
+# Functional gradient
+df = grad(lambda x: x ** 3 + 2 * x)
+print(f"f'(3) = {df(3.0)}")       # 29.0
+
+# Tensors with shape checking and SIMD
+a = Tensor[[3, 4], float32]([[1,2,3,4], [5,6,7,8], [9,10,11,12]])
+b = Tensor[[4, 2], float32]([[1,2], [3,4], [5,6], [7,8]])
+c = a @ b                         # Shape-checked: (3,4) @ (4,2) = (3,2)
+print(c.shape)                    # (3, 2)
+
+# Result type for explicit error handling
+def divide(a, b):
+    if b == 0:
+        return Err("division by zero")
+    return Ok(a / b)
+
+result = divide(10, 3).map(lambda x: round(x, 2))
+print(result.unwrap())            # 3.33</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="mod-result">5. Result &amp; Option Types</h2>
+
+<h3>Module: <code>xue.result</code></h3>
+<p>Provides <code>Result[T, E]</code> and <code>Option[T]</code> types inspired by Rust. Makes error paths visible in type signatures instead of using exceptions or None.</p>
+
+<h4>Result[T, E]</h4>
+<pre><code>from xue.result import Ok, Err, Result
+
+def parse_int(s: str) -> Result[int, str]:
+    try:
+        return Ok(int(s))
+    except ValueError:
+        return Err(f"cannot parse '{s}' as int")
+
+# Pattern matching (Python 3.10+)
+match parse_int("42"):
+    case Ok(value):
+        print(f"Got: {value}")
+    case Err(error):
+        print(f"Error: {error}")
+
+# Method chaining
+result = (parse_int("10")
+          .map(lambda x: x * 2)
+          .and_then(lambda x: Ok(x + 1) if x < 100 else Err("too large"))
+          .unwrap_or(0))</code></pre>
+
+<h4>Option[T]</h4>
+<pre><code>from xue.result import Some, Nothing, Option
+
+def find_user(id: int) -> Option[dict]:
+    users = {1: {"name": "Alice"}, 2: {"name": "Bob"}}
+    if id in users:
+        return Some(users[id])
+    return Nothing()
+
+name = find_user(1).map(lambda u: u["name"]).unwrap_or("Unknown")</code></pre>
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td><code>.is_ok()</code> / <code>.is_err()</code></td><td>Check variant</td></tr>
+<tr><td><code>.unwrap()</code></td><td>Get value or raise</td></tr>
+<tr><td><code>.unwrap_or(default)</code></td><td>Get value or return default</td></tr>
+<tr><td><code>.map(fn)</code></td><td>Transform the Ok/Some value</td></tr>
+<tr><td><code>.and_then(fn)</code></td><td>Chain operations that return Result/Option</td></tr>
+<tr><td><code>.or_else(fn)</code></td><td>Handle the error case</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="mod-secret">6. Secret Type</h2>
+
+<h3>Module: <code>xue.secret</code></h3>
+<p>Wraps sensitive data (API keys, tokens, passwords) and prevents accidental exposure through repr, str, logging, or JSON serialization.</p>
+
+<pre><code>from xue.secret import Secret
+
+api_key = Secret("sk-abc123def456")
+
+print(api_key)              # Secret(****)
+f"{api_key}"                # Secret(****)
+repr(api_key)               # Secret(****)
+
+# Intentional access
+token = api_key.expose()    # "sk-abc123def456"
+
+# Constant-time comparison (prevents timing attacks)
+if api_key == Secret("sk-abc123def456"):
+    print("Authenticated")
+
+# Type-safe function signatures
+def connect(token: Secret[str]) -> None:
+    requests.get(url, headers={"Authorization": token.expose()})</code></pre>
+
+<div class="callout warning">
+  <strong>Security note:</strong> Set <code>XUE_SCRUB_SECRETS=1</code> to also redact Secret values from tracebacks.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="mod-contracts">7. Design by Contract</h2>
+
+<h3>Module: <code>xue.contracts</code></h3>
+<p>Adds <code>@requires</code> (preconditions), <code>@ensures</code> (postconditions), and <code>@invariant</code> (class invariants) decorators.</p>
+
+<pre><code>from xue.contracts import requires, ensures, invariant
+
+@requires(lambda a, b: b != 0, "divisor must not be zero")
+@ensures(lambda result, a, b: abs(result * b - a) < 1e-10, "result * b must equal a")
+def divide(a: float, b: float) -> float:
+    return a / b
+
+divide(10, 3)   # OK
+divide(10, 0)   # ContractError: divisor must not be zero
+
+@invariant(lambda self: self.balance >= 0, "balance must be non-negative")
+class BankAccount:
+    def __init__(self, balance: float):
+        self.balance = balance
+
+    @requires(lambda self, amount: amount > 0, "amount must be positive")
+    def withdraw(self, amount: float):
+        self.balance -= amount</code></pre>
+
+<div class="callout">
+  <strong>Tip:</strong> Disable contract checking in production with <code>XUE_CONTRACTS=0</code> or <code>xue.contracts.set_enabled(False)</code> for zero overhead.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="mod-strict">8. Strict Typing</h2>
+
+<h3>Module: <code>xue.strict</code></h3>
+<p>Runtime type checking based on function annotations. Catches type mismatches at function boundaries instead of letting them propagate.</p>
+
+<pre><code>from xue.strict import checked
+
+@checked
+def compute(x: float, y: float) -> float:
+    return x + y
+
+compute(1.0, 2.0)      # OK -> 3.0
+compute("a", "b")      # TypeError: x: expected float, got str
+
+# Enable for entire module
+from xue.strict import strict_module
+strict_module(__name__)</code></pre>
+
+<p>Enable globally with <code>XUE_STRICT=1</code> or <code>python --strict</code>.</p>
+
+<!-- ============================================================ -->
+<h2 id="mod-units">9. Physical Units</h2>
+
+<h3>Module: <code>xue.units</code></h3>
+<p>A complete SI unit system with dimension analysis. Prevents unit mismatch errors in scientific and robotics code. Backed by a C extension for high-performance arithmetic.</p>
+
+<h4>Basic Usage</h4>
+<pre><code>from xue.units import meters, seconds, kg, kilometers, newtons, degrees, radians
+
+distance = 100 * meters
+time = 9.58 * seconds
+speed = distance / time              # Quantity(10.44..., m/s)
+
+mass = 75 * kg
+force = mass * (speed / time)        # Quantity(..., kg*m/s^2)
+
+# Dimension mismatch caught at runtime
+distance + time                      # DimensionError!
+
+# Unit conversion
+distance_km = distance.to(kilometers)  # 0.1
+
+# Angle conversion
+angle = 180 * degrees
+angle.to(radians)                    # 3.14159...</code></pre>
+
+<h4>Available Units</h4>
+<table>
+<tr><th>Category</th><th>Units</th></tr>
+<tr><td>Length</td><td><code>meters</code>, <code>kilometers</code>, <code>centimeters</code>, <code>millimeters</code></td></tr>
+<tr><td>Mass</td><td><code>kilograms</code> (<code>kg</code>), <code>grams</code></td></tr>
+<tr><td>Time</td><td><code>seconds</code> (<code>s</code>), <code>milliseconds</code>, <code>microseconds</code>, <code>nanoseconds</code>, <code>minutes</code>, <code>hours</code></td></tr>
+<tr><td>Electrical</td><td><code>amperes</code>, <code>volts</code>, <code>watts</code></td></tr>
+<tr><td>Derived</td><td><code>newtons</code>, <code>pascals</code>, <code>joules</code>, <code>hertz</code>, <code>newton_meters</code></td></tr>
+<tr><td>Angle</td><td><code>radians</code>, <code>degrees</code>, <code>rpm</code></td></tr>
+<tr><td>Other</td><td><code>kelvin</code>, <code>moles</code>, <code>candelas</code></td></tr>
+</table>
+
+<h4>Custom Units</h4>
+<pre><code>from xue.units import Dimension, Unit
+
+# Define a custom dimension
+pressure = Dimension((-1, 1, -2, 0, 0, 0, 0))  # L^-1 * M * T^-2
+bar = Unit(pressure, 1e5, "bar", "bar")
+atm = Unit(pressure, 101325.0, "atmosphere", "atm")
+
+p = 2.5 * bar
+p.to(atm)  # 2.467...</code></pre>
+
+<div class="callout success">
+  <strong>Performance:</strong> The C extension packs 7 dimension exponents into a single 64-bit integer for single-instruction comparison. Quantity arithmetic is <strong>9&ndash;15x faster</strong> than pure Python.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="mod-autodiff">10. Automatic Differentiation</h2>
+
+<h3>Module: <code>xue.autodiff</code></h3>
+<p>Reverse-mode automatic differentiation via operator overloading. Computes exact gradients, Jacobians, and higher-order derivatives. No symbolic math or finite differences.</p>
+
+<h4>Variable and Backward</h4>
+<pre><code>from xue.autodiff import Variable, grad, value_and_grad, jacobian
+
+# Build computation graph, then differentiate
+x = Variable(3.0, name="x")
+y = Variable(2.0, name="y")
+z = x ** 2 + 2 * x * y + y ** 2   # (x + y)^2
+
+z.backward()
+print(x.grad)   # 10.0  (2x + 2y)
+print(y.grad)   # 10.0  (2x + 2y)</code></pre>
+
+<h4>Functional API</h4>
+<pre><code># grad() returns a function
+df = grad(lambda x: x ** 3 + 2 * x)
+df(3.0)      # 29.0   (3x^2 + 2)
+df(1.0)      # 5.0
+
+# value_and_grad() returns both
+vg = value_and_grad(lambda x: (x - 3) ** 2)
+val, g = vg(5.0)   # val=4.0, g=4.0
+
+# Jacobian matrix
+def f(x):
+    return [x[0] + x[1], x[0] * x[1]]
+J = jacobian(f, [2.0, 3.0])
+# [[1.0, 1.0], [3.0, 2.0]]</code></pre>
+
+<h4>Supported Operations</h4>
+<table>
+<tr><th>Category</th><th>Operations</th></tr>
+<tr><td>Arithmetic</td><td><code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>**</code>, unary <code>-</code></td></tr>
+<tr><td>Transcendental</td><td><code>.exp()</code>, <code>.log()</code>, <code>.sqrt()</code></td></tr>
+<tr><td>Trigonometric</td><td><code>.sin()</code>, <code>.cos()</code>, <code>.tan()</code>, <code>.tanh()</code></td></tr>
+<tr><td>Activation</td><td><code>.sigmoid()</code>, <code>.relu()</code></td></tr>
+<tr><td>Other</td><td><code>.abs()</code></td></tr>
+</table>
+
+<div class="callout success">
+  <strong>Performance:</strong> The C extension replaces Python closures with an enum-based operation table and C-level topological sort. Backward pass uses switch-dispatch instead of function calls. <strong>9&ndash;11x faster</strong> than pure Python.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="mod-tensor">11. Tensor</h2>
+
+<h3>Module: <code>xue.tensor</code></h3>
+<p>N-dimensional tensor type with runtime shape validation, SIMD-accelerated operations, and optional CUDA GPU support.</p>
+
+<h4>Creating Tensors</h4>
+<pre><code>from xue.tensor import Tensor, float32, float64, zeros, ones, eye, arange
+
+# From nested lists (shape inferred)
+a = Tensor([[1, 2, 3], [4, 5, 6]])        # shape (2, 3), dtype float64
+
+# With explicit shape and dtype
+b = Tensor[[3, 4], float32]([[1,2,3,4], [5,6,7,8], [9,10,11,12]])
+
+# Factory functions
+z = zeros((3, 3))
+o = ones((2, 4), dtype=float32)
+I = eye(3)
+r = arange(0, 10, 0.5)</code></pre>
+
+<h4>Arithmetic (SIMD-accelerated)</h4>
+<pre><code>a = Tensor([[1, 2], [3, 4]])
+b = Tensor([[5, 6], [7, 8]])
+
+c = a + b        # elementwise add (AVX2: 4 doubles/cycle)
+d = a * b        # elementwise multiply
+e = a - b        # elementwise subtract
+f = a / b        # elementwise divide
+g = a * 2.5      # scalar multiply
+h = -a           # negate</code></pre>
+
+<h4>Matrix Multiply (SIMD tiled)</h4>
+<pre><code>a = Tensor([[1, 2, 3], [4, 5, 6]])    # (2, 3)
+b = Tensor([[1, 2], [3, 4], [5, 6]])  # (3, 2)
+c = a @ b                             # (2, 2) - shape checked!
+
+# Shape mismatch caught:
+d = Tensor([[1, 2, 3]])               # (1, 3)
+d @ b                                 # OK: (1,3) @ (3,2) = (1,2)
+d @ a                                 # ShapeError: inner dimensions 3 != 2</code></pre>
+
+<h4>Shape Operations</h4>
+<pre><code>t = Tensor([[1, 2, 3, 4], [5, 6, 7, 8]])   # (2, 4)
+t.reshape(4, 2)       # (4, 2)
+t.T                   # transpose: (4, 2)
+t.sum()               # 36.0
+t.mean()              # 4.5
+t.max()               # 8.0
+t.min()               # 1.0
+t.tolist()            # [[1.0, 2.0, ...], ...]</code></pre>
+
+<h4>GPU Support (CUDA)</h4>
+<pre><code># Transfer to GPU (requires NVIDIA GPU + CUDA)
+gpu_tensor = tensor.to_gpu()
+
+# Operations on GPU tensors use CUDA kernels
+c = gpu_a + gpu_b       # CUDA elementwise add
+d = gpu_a @ gpu_b       # CUDA tiled matmul
+
+# Transfer back to CPU
+cpu_tensor = gpu_tensor.to_cpu()</code></pre>
+
+<div class="callout">
+  <strong>Note:</strong> GPU support requires an NVIDIA GPU with CUDA 11.0+. If no GPU is detected, <code>.to_gpu()</code> raises <code>RuntimeError</code>. All operations have CPU fallbacks.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="mod-dispatch">12. Multiple Dispatch</h2>
+
+<h3>Module: <code>xue.dispatch</code></h3>
+<p>Julia-style multiple dispatch based on all argument types.</p>
+
+<pre><code>from xue.dispatch import multimethod
+
+@multimethod
+def add(a: int, b: int) -> int:
+    return a + b
+
+@multimethod
+def add(a: float, b: float) -> float:
+    return a + b
+
+@multimethod
+def add(a: list, b: list) -> list:
+    return a + b
+
+add(1, 2)        # 3      (int, int)
+add(1.5, 2.5)    # 4.0    (float, float)
+add([1], [2])    # [1, 2] (list, list)</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="mod-unicode">13. Unicode Operators</h2>
+
+<h3>Module: <code>xue.unicode_ops</code></h3>
+<p>Registers a custom codec that translates Unicode mathematical operators to Python equivalents during source parsing.</p>
+
+<pre><code># coding: xue-unicode
+
+if x &le; 10 &and; y &ne; 0:
+    result = x &divide; y</code></pre>
+
+<table>
+<tr><th>Unicode</th><th>Python</th><th>Unicode</th><th>Python</th></tr>
+<tr><td><code>&le;</code></td><td><code>&lt;=</code></td><td><code>&ge;</code></td><td><code>&gt;=</code></td></tr>
+<tr><td><code>&ne;</code></td><td><code>!=</code></td><td><code>&equiv;</code></td><td><code>==</code></td></tr>
+<tr><td><code>&times;</code></td><td><code>*</code></td><td><code>&divide;</code></td><td><code>/</code></td></tr>
+<tr><td><code>&not;</code></td><td><code>not</code></td><td><code>&and;</code></td><td><code>and</code></td></tr>
+<tr><td><code>&or;</code></td><td><code>or</code></td><td><code>&larr;</code></td><td><code>=</code></td></tr>
+<tr><td><code>&in;</code></td><td><code>in</code></td><td><code>&notin;</code></td><td><code>not in</code></td></tr>
+<tr><td><code>&radic;</code></td><td><code>math.sqrt</code></td><td><code>&infin;</code></td><td><code>float('inf')</code></td></tr>
+<tr><td><code>&pi;</code></td><td><code>3.14159...</code></td><td><code>&tau;</code></td><td><code>6.28318...</code></td></tr>
+</table>
+
+<p>Activate globally: <code>import xue.unicode_ops; xue.unicode_ops.register()</code></p>
+
+<!-- ============================================================ -->
+<h2 id="mod-sandbox">14. Sandboxed Imports</h2>
+
+<h3>Module: <code>xue.sandbox</code></h3>
+<p>Capability-based import restrictions for untrusted code. Prevents imported modules from accessing network, filesystem, subprocess, or ctypes.</p>
+
+<pre><code>from xue.sandbox import sandboxed_import, SandboxPolicy
+
+policy = SandboxPolicy(
+    allow_network=False,
+    allow_filesystem=False,
+    allow_subprocess=False,
+    allow_ctypes=False,
+)
+untrusted = sandboxed_import("untrusted_plugin", policy=policy)
+# Any network/file access by the plugin raises SandboxViolation
+
+# Context manager form
+from xue.sandbox import sandbox
+with sandbox(allow_network=False, allow_subprocess=False):
+    import some_plugin</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="mod-llmhook">15. LLM Integration</h2>
+
+<h3>Module: <code>xue.llmhook</code></h3>
+<p>Optional AI-powered diagnostics. Zero overhead when disabled.</p>
+
+<pre><code>from xue.llmhook import explain, ask, configure
+
+# Configure backend (Ollama, OpenAI, or Unix socket)
+configure(backend="http", url="http://localhost:11434/api/generate", model="llama3")
+
+# Explain an error
+try:
+    result = compute(data)
+except Exception as e:
+    explanation = explain(e)
+    print(explanation)  # Human-readable fix suggestion
+
+# Ask a question about your code
+answer = ask("Why is this function returning None?")</code></pre>
+
+<p>Activate with: <code>python --llm</code> or <code>XUE_LLM_HOOK=1</code></p>
+
+<!-- ============================================================ -->
+<h2 id="native">16. Native C Extensions</h2>
+
+<p>Three performance-critical modules have C extension backends that load automatically. Pure Python fallbacks are always available.</p>
+
+<table>
+<tr><th>Module</th><th>C Extension</th><th>Key Optimizations</th></tr>
+<tr><td><code>xue.units</code></td><td><code>_units_accel.c</code></td><td>Dimension exponents packed into int64; cached Unit objects; Quantity arithmetic in C</td></tr>
+<tr><td><code>xue.autodiff</code></td><td><code>_autodiff_accel.c</code></td><td>Enum-based op table instead of closures; C topological sort; switch-dispatch backward</td></tr>
+<tr><td><code>xue.tensor</code></td><td><code>_tensor_accel.c</code></td><td>Raw <code>double*</code> storage; AVX2 SIMD; tiled matmul; optional CUDA</td></tr>
+</table>
+
+<div class="callout">
+  <strong>Fallback:</strong> If C extensions are not compiled, the Python implementations are used automatically. The API is identical &mdash; no code changes needed.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="simd">17. SIMD Vectorization</h2>
+
+<p>The tensor C extension auto-detects the CPU architecture at compile time and uses the appropriate SIMD instruction set:</p>
+
+<table>
+<tr><th>Platform</th><th>SIMD</th><th>Doubles/Cycle</th><th>Register Width</th></tr>
+<tr><td>x86_64 (Intel/AMD)</td><td>AVX2</td><td>4</td><td>256-bit</td></tr>
+<tr><td>aarch64 (Apple Silicon, ARM servers)</td><td>NEON</td><td>2</td><td>128-bit</td></tr>
+<tr><td>Other</td><td>Scalar fallback</td><td>1</td><td>N/A</td></tr>
+</table>
+
+<h4>Vectorized Operations</h4>
+<ul>
+  <li><strong>Elementwise:</strong> add, subtract, multiply, divide, negate, scalar multiply, scalar add</li>
+  <li><strong>Reduction:</strong> sum (horizontal SIMD sum)</li>
+  <li><strong>Matrix multiply:</strong> Tiled algorithm (32x32 tiles) with SIMD inner loop</li>
+</ul>
+
+<p>All operations release the GIL during computation via <code>Py_BEGIN_ALLOW_THREADS</code>, enabling true parallelism on the 3.14t free-threaded build.</p>
+
+<!-- ============================================================ -->
+<h2 id="cuda">18. CUDA GPU Support</h2>
+
+<p>GPU acceleration is provided by a separate CUDA kernel library loaded at runtime via dynamic loading (<code>dlopen</code> on Linux/macOS, <code>LoadLibrary</code> on Windows). No compile-time CUDA dependency for the main extension.</p>
+
+<h4>CUDA Kernels</h4>
+<table>
+<tr><th>Kernel</th><th>Description</th></tr>
+<tr><td><code>cuda_elementwise_add/sub/mul/div</code></td><td>Parallel elementwise operations (256 threads/block)</td></tr>
+<tr><td><code>cuda_scalar_mul</code></td><td>Parallel scalar multiplication</td></tr>
+<tr><td><code>cuda_matmul</code></td><td>Shared-memory tiled matrix multiply (16x16 tiles)</td></tr>
+</table>
+
+<h4>Building CUDA Kernels</h4>
+<pre><code># Requires nvcc (NVIDIA CUDA Compiler)
+nvcc -shared -O3 -Xcompiler -fPIC \
+    _xue_cuda_kernels.cu -o _xue_cuda_kernels.so -lcudart
+
+# Copy to xue library directory
+cp _xue_cuda_kernels.so /path/to/lib/pythonX.Y/xue/</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="benchmarks">19. Benchmarks</h2>
+
+<p>Measured on x86_64 (GCC 13.3, AVX2), comparing pure Python vs C extensions.</p>
+
+<h3>Units (Quantity arithmetic)</h3>
+<table class="perf-table">
+<tr><th>Operation</th><th>Python</th><th>C Extension</th><th>Speedup</th></tr>
+<tr><td>Quantity create</td><td>2.7M ops/s</td><td>11.6M ops/s</td><td>4.3x</td></tr>
+<tr><td>Quantity add</td><td>1.9M ops/s</td><td>17.0M ops/s</td><td>8.9x</td></tr>
+<tr><td>Quantity multiply</td><td>448K ops/s</td><td>6.6M ops/s</td><td>14.8x</td></tr>
+<tr><td>Quantity divide</td><td>427K ops/s</td><td>6.5M ops/s</td><td>15.2x</td></tr>
+<tr><td>Unit conversion</td><td>3.5M ops/s</td><td>10.3M ops/s</td><td>2.9x</td></tr>
+</table>
+
+<h3>Autodiff (Variable + backward)</h3>
+<table class="perf-table">
+<tr><th>Expression</th><th>Python</th><th>C Extension</th><th>Speedup</th></tr>
+<tr><td>x&sup2;+2x+1 + backward</td><td>141K ops/s</td><td>1.23M ops/s</td><td>8.7x</td></tr>
+<tr><td>MLP-like + backward</td><td>79K ops/s</td><td>728K ops/s</td><td>9.2x</td></tr>
+</table>
+
+<h3>Tensor (SIMD + tiled matmul)</h3>
+<table class="perf-table">
+<tr><th>Operation</th><th>Python</th><th>C Extension</th><th>Speedup</th></tr>
+<tr><td>Elementwise add (100x100)</td><td>802 ops/s</td><td>251K ops/s</td><td>313x</td></tr>
+<tr><td>Elementwise mul (100x100)</td><td>840 ops/s</td><td>253K ops/s</td><td>301x</td></tr>
+<tr><td>Matmul (100x100)</td><td>8 ops/s</td><td>2,870 ops/s</td><td>340x</td></tr>
+<tr><td>Matmul (256x256)</td><td>0.5 ops/s</td><td>234 ops/s</td><td>433x</td></tr>
+<tr><td>Sum reduction (100x100)</td><td>8.9K ops/s</td><td>435K ops/s</td><td>49x</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="building">20. Building from Source</h2>
+
+<h3>Directory Structure</h3>
+<pre><code>xue/                         # Git repository (~630 KB)
+  xue-modules/               # Python module source files
+    __init__.py
+    result.py                 # Result[T,E] and Option[T]
+    secret.py                 # Secret type
+    contracts.py              # @requires, @ensures, @invariant
+    strict.py                 # Runtime type checking
+    units.py                  # Physical units (+ C accel)
+    autodiff.py               # Automatic differentiation (+ C accel)
+    tensor.py                 # Tensor type (+ C accel)
+    dispatch.py               # Multiple dispatch
+    unicode_ops.py            # Unicode operator aliases
+    sandbox.py                # Sandboxed imports
+    llmhook.py                # LLM integration
+    tests/                    # 197 unit tests
+  xue-native/                 # C extension source code
+    _units_accel.c            # Units C extension
+    _autodiff_accel.c         # Autodiff C extension
+    _tensor_accel.c           # Tensor C extension (AVX2 + NEON + CUDA)
+    _xue_cuda_kernels.cu      # CUDA GPU kernels
+    build.sh                  # Cross-platform build script
+    benchmark.py              # Performance benchmark
+  xue-guide.html              # User guide
+  xue-guide.pdf               # User guide (PDF)
+  .gitignore
+
+# Hosted separately (www.opencan.ai/sources/xue):
+  xue-python-3.12.13.tar.gz  # Full CPython 3.12 fork (89 MB)</code></pre>
+
+<h3>Platform Support</h3>
+<table>
+<tr><th>Platform</th><th>SIMD</th><th>CUDA</th><th>Compiler</th><th>Status</th></tr>
+<tr><td>Linux x86_64</td><td>AVX2</td><td>Yes (dlopen)</td><td>gcc</td><td>Fully tested</td></tr>
+<tr><td>macOS x86_64</td><td>AVX2</td><td>No*</td><td>clang</td><td>Supported</td></tr>
+<tr><td>macOS ARM64 (Apple Silicon)</td><td>NEON</td><td>No*</td><td>clang</td><td>Supported</td></tr>
+<tr><td>Windows x86_64</td><td>AVX2</td><td>Yes (LoadLibrary)</td><td>MSVC/gcc</td><td>Supported</td></tr>
+</table>
+<p><small>* macOS dropped CUDA support in 10.14; CUDA code compiles but no GPU runtime available.</small></p>
+
+<h3>Build Commands</h3>
+<pre><code># Build C extensions (auto-detects platform, SIMD, compiler)
+cd xue-native
+bash build.sh
+
+# The script:
+# 1. Detects CPU architecture (x86_64 → AVX2, aarch64 → NEON)
+# 2. Detects OS (Linux → -ldl, macOS → libSystem, Windows → kernel32)
+# 3. Compiles .c files with -O3 -march=native
+# 4. Links against Python includes for 3.12 and 3.14t
+# 5. Optionally builds CUDA kernels with nvcc
+# 6. Runs verification imports
+
+# Override Python paths if needed:
+PYTHON312=/path/to/python3.12 PYTHON314=/path/to/python3.14t bash build.sh</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="testing">21. Testing</h2>
+
+<pre><code># Run all tests
+python3 -m unittest xue.tests.test_units xue.tests.test_autodiff \
+    xue.tests.test_tensor xue.tests.test_result xue.tests.test_secret \
+    xue.tests.test_contracts xue.tests.test_dispatch \
+    xue.tests.test_strict xue.tests.test_unicode_ops -v
+
+# Run a specific test module
+python3 -m unittest xue.tests.test_tensor -v
+
+# Run benchmarks
+cd xue-native && python3 benchmark.py</code></pre>
+
+<div class="callout success">
+  <strong>Test status:</strong> All 197 tests pass on both Python 3.12 and 3.14t (free-threaded). C extensions are API-compatible with pure Python implementations.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="api-reference">22. API Reference</h2>
+
+<h3>xue.result</h3>
+<table>
+<tr><th>Type/Function</th><th>Description</th></tr>
+<tr><td><code>Ok(value)</code></td><td>Success variant of Result</td></tr>
+<tr><td><code>Err(error)</code></td><td>Error variant of Result</td></tr>
+<tr><td><code>Some(value)</code></td><td>Present variant of Option</td></tr>
+<tr><td><code>Nothing()</code></td><td>Absent variant of Option</td></tr>
+</table>
+
+<h3>xue.units</h3>
+<table>
+<tr><th>Type/Function</th><th>Description</th></tr>
+<tr><td><code>Dimension(exponents, name=None)</code></td><td>Physical dimension (7 SI exponents)</td></tr>
+<tr><td><code>Unit(dimension, scale, name, symbol)</code></td><td>Physical unit with scale factor</td></tr>
+<tr><td><code>Quantity(value, unit)</code></td><td>Numeric value with unit</td></tr>
+<tr><td><code>Quantity.to(target_unit)</code></td><td>Convert to different unit</td></tr>
+<tr><td><code>DimensionError</code></td><td>Raised on incompatible dimensions</td></tr>
+</table>
+
+<h3>xue.autodiff</h3>
+<table>
+<tr><th>Type/Function</th><th>Description</th></tr>
+<tr><td><code>Variable(data, name="", requires_grad=True)</code></td><td>Differentiable variable</td></tr>
+<tr><td><code>Variable.backward()</code></td><td>Compute gradients via reverse-mode AD</td></tr>
+<tr><td><code>grad(f, argnum=0)</code></td><td>Return gradient function</td></tr>
+<tr><td><code>value_and_grad(f, argnum=0)</code></td><td>Return (value, gradient) function</td></tr>
+<tr><td><code>jacobian(f, x)</code></td><td>Compute Jacobian matrix at point x</td></tr>
+</table>
+
+<h3>xue.tensor</h3>
+<table>
+<tr><th>Type/Function</th><th>Description</th></tr>
+<tr><td><code>Tensor(data, shape, dtype)</code></td><td>N-dimensional tensor</td></tr>
+<tr><td><code>Tensor[[shape], dtype](data)</code></td><td>Shape-checked constructor</td></tr>
+<tr><td><code>zeros(shape, dtype)</code></td><td>Zero-filled tensor</td></tr>
+<tr><td><code>ones(shape, dtype)</code></td><td>One-filled tensor</td></tr>
+<tr><td><code>eye(n, dtype)</code></td><td>Identity matrix</td></tr>
+<tr><td><code>arange(start, stop, step, dtype)</code></td><td>Range tensor</td></tr>
+<tr><td><code>Tensor.to_gpu()</code></td><td>Transfer to CUDA GPU</td></tr>
+<tr><td><code>Tensor.to_cpu()</code></td><td>Transfer to CPU</td></tr>
+<tr><td><code>ShapeError</code></td><td>Raised on shape mismatch</td></tr>
+</table>
+
+<h3>xue.contracts</h3>
+<table>
+<tr><th>Decorator</th><th>Description</th></tr>
+<tr><td><code>@requires(predicate, message)</code></td><td>Precondition check</td></tr>
+<tr><td><code>@ensures(predicate, message)</code></td><td>Postcondition check</td></tr>
+<tr><td><code>@invariant(predicate, message)</code></td><td>Class invariant check</td></tr>
+<tr><td><code>set_enabled(bool)</code></td><td>Enable/disable contract checking</td></tr>
+</table>
+
+<h3>xue.dispatch</h3>
+<table>
+<tr><th>Decorator</th><th>Description</th></tr>
+<tr><td><code>@multimethod</code></td><td>Register function for multiple dispatch</td></tr>
+</table>
+
+<h3>xue.secret</h3>
+<table>
+<tr><th>Type</th><th>Description</th></tr>
+<tr><td><code>Secret(value)</code></td><td>Wrap sensitive data</td></tr>
+<tr><td><code>Secret.expose()</code></td><td>Retrieve the raw value</td></tr>
+</table>
+
+<!-- ============================================================ -->
+
+<footer>
+  <p>&copy; 2026 <a href="https://opencan.ai">OpenCan.ai</a>. All rights reserved. Licensed under MIT License.</p>
+  <p>
+    <a href="https://opencan.ai/pages/contact.html">Contact</a> &middot;
+    <a href="https://opencan.ai/pages/privacy.html">Privacy</a> &middot;
+    <a href="https://opencan.ai/pages/terms.html">Terms</a> &middot;
+    <a href="https://opencan.ai">Back to OpenCan.ai</a>
+  </p>
+</footer>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('active');
+}
+const navLinks = document.querySelectorAll('.sidebar nav a');
+const sections = document.querySelectorAll('h2[id]');
+function updateActiveNav() {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 100) current = s.id;
+  });
+  navLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+}
+window.addEventListener('scroll', updateActiveNav);
+window.addEventListener('load', updateActiveNav);
+navLinks.forEach(a => a.addEventListener('click', () => {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('active');
+}));
+</script>
+</body>
+</html>
