@@ -126,6 +126,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME:-${{ github.event.inputs.tag }}}"
           ARCHIVE="xue-${VERSION}-${{ matrix.platform }}.tar.gz"
           tar -czf "$ARCHIVE" -C dist .
+          shasum -a 256 "$ARCHIVE" > "$ARCHIVE.sha256"
           echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
 
       - name: Package (Windows)
@@ -137,6 +138,7 @@ jobs:
           $version = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "${{ github.event.inputs.tag }}" }
           $archive = "xue-${version}-${{ matrix.platform }}.zip"
           Compress-Archive -Path dist\* -DestinationPath $archive
+          ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() + "  $archive") | Out-File "$archive.sha256" -Encoding ascii
           echo "ARCHIVE=$archive" >> $env:GITHUB_ENV
 
       # ---- Upload to GitHub Release -----------------------------------------
@@ -144,5 +146,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name || github.event.inputs.tag }}
-          files: ${{ env.ARCHIVE }}
+          files: |
+            ${{ env.ARCHIVE }}
+            ${{ env.ARCHIVE }}.sha256
           generate_release_notes: true
