@@ -1,5 +1,11 @@
 name: Build & Release
 
+# Builds self-contained Xue distributions: a relocatable CPython
+# (python-build-standalone) with the `xue` package in its standard library,
+# the Xue start-up hook in site.py, and the C-accelerated units / autodiff /
+# tensor backends. Two flavours per platform: CPython 3.12 and free-threaded
+# CPython 3.14t.
+
 on:
   push:
     tags:
@@ -7,145 +13,172 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to release (e.g. v0.2.0)'
+        description: 'Version used in archive names and the release (e.g. v1.1.0)'
         required: true
+      publish:
+        description: 'Upload to the GitHub Release (false = build artifacts only)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
+env:
+  PBS_RELEASE: '20261026'
+  PY312: '3.12.16'
+  PY314: '3.14.10'
+
 jobs:
   build:
-    name: ${{ matrix.platform }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.target.platform }} (${{ matrix.flavor }})
+    runs-on: ${{ matrix.target.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-22.04
-            platform: linux-x86_64
-          - os: ubuntu-22.04-arm
-            platform: linux-aarch64
-          - os: macos-13
-            platform: macos-x86_64
-          - os: macos-latest
-            platform: macos-arm64
-          - os: windows-latest
-            platform: windows-x86_64
+        flavor: ['3.12', '3.14t']
+        target:
+          - { os: ubuntu-22.04,     platform: linux-x86_64,   triple: x86_64-unknown-linux-gnu }
+          - { os: ubuntu-22.04-arm, platform: linux-aarch64,  triple: aarch64-unknown-linux-gnu }
+          - { os: macos-latest,     platform: macos-arm64,    triple: aarch64-apple-darwin }
+          - { os: macos-15-intel,   platform: macos-x86_64,   triple: x86_64-apple-darwin }
+          - { os: windows-latest,   platform: windows-x86_64, triple: x86_64-pc-windows-msvc }
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - name: Fetch CPython
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.flavor }}" = "3.12" ]; then
+            F="cpython-${PY312}+${PBS_RELEASE}-${{ matrix.target.triple }}-install_only_stripped.tar.gz"; SUFFIX=""
+          else
+            F="cpython-${PY314}+${PBS_RELEASE}-${{ matrix.target.triple }}-freethreaded-install_only_stripped.tar.gz"; SUFFIX="-3.14t"
+          fi
+          U="https://github.com/astral-sh/python-build-standalone/releases/download/${PBS_RELEASE}"
+          mkdir -p "$RUNNER_TEMP/pbs"
+          curl -fsSL -o "$RUNNER_TEMP/pbs/$F" "$U/$F"
+          curl -fsSL -o "$RUNNER_TEMP/pbs/SHA256SUMS" "$U/SHA256SUMS"
+          want=$(grep " $F\$" "$RUNNER_TEMP/pbs/SHA256SUMS" | cut -d' ' -f1)
+          if command -v sha256sum >/dev/null; then got=$(sha256sum "$RUNNER_TEMP/pbs/$F" | cut -d' ' -f1)
+          else got=$(shasum -a 256 "$RUNNER_TEMP/pbs/$F" | cut -d' ' -f1); fi
+          [ -n "$want" ] && [ "$want" = "$got" ] || { echo "checksum mismatch for $F"; exit 1; }
+          tar -xzf "$RUNNER_TEMP/pbs/$F"
+          VERSION="${{ github.event.inputs.tag || github.ref_name }}"
+          PKG="xue-${VERSION}-${{ matrix.target.platform }}${SUFFIX}"
+          mv python "$PKG"
+          if [ "$RUNNER_OS" = "Windows" ]; then PYEXE="$PKG/python.exe"; else PYEXE="$PKG/bin/python3"; fi
+          "$PYEXE" -VV
+          echo "PKG=$PKG" >> "$GITHUB_ENV"
+          echo "PYEXE=$PYEXE" >> "$GITHUB_ENV"
 
-      # ---- Optional: Python 3.14t (free-threading) --------------------------
-      - name: Install Python 3.14t (Linux)
+      - name: Add the xue package and start-up hook
+        run: |
+          set -euo pipefail
+          "$PYEXE" tools/assemble_dist.py "$PKG" | tee -a "$GITHUB_ENV"
+
+      # ---- C accelerators ----------------------------------------------------
+      # Linux: compile in a manylinux_2_28 container so the extensions run on
+      # glibc 2.28+ (RHEL 8, Ubuntu 20.04, Debian 10 and newer).
+      - name: Build C extensions (Linux)
         if: runner.os == 'Linux'
         run: |
-          sudo add-apt-repository ppa:deadsnakes/ppa -y 2>/dev/null || true
-          sudo apt-get update -qq
-          sudo apt-get install -y python3.14-nogil 2>/dev/null \
-            || echo "python3.14-nogil not yet in deadsnakes; skipping 3.14t build"
+          set -euo pipefail
+          case "$(uname -m)" in x86_64) SIMD="-mavx2 -mfma" ;; *) SIMD="" ;; esac
+          docker run --rm -v "$PWD:/w" -w /w \
+            -e PYINC -e PYEXT -e XUEDIR -e SIMD="$SIMD" \
+            "quay.io/pypa/manylinux_2_28_$(uname -m)" bash -euc '
+              for s in _units_accel _autodiff_accel _tensor_accel; do
+                gcc -shared -O3 $SIMD -fPIC -I"$PYINC" "xue-native/$s.c" -o "$XUEDIR/$s$PYEXT" -lm -ldl
+                echo "built $s$PYEXT"
+              done'
+          sudo chown -R "$(id -u):$(id -g)" "$XUEDIR"
 
-      - name: Install Python 3.14t (macOS)
+      - name: Build C extensions (macOS)
         if: runner.os == 'macOS'
-        run: brew install python@3.14 2>/dev/null || echo "python@3.14 not available; skipping"
+        run: |
+          set -euo pipefail
+          case "$(uname -m)" in x86_64) SIMD="-mavx2 -mfma" ;; *) SIMD="" ;; esac
+          for s in _units_accel _autodiff_accel _tensor_accel; do
+            clang -bundle -undefined dynamic_lookup -mmacosx-version-min=11.0 -O3 $SIMD -fPIC \
+              -I"$PYINC" "xue-native/$s.c" -o "$XUEDIR/$s$PYEXT"
+            echo "built $s$PYEXT"
+          done
 
-      # ---- Set up MSVC for Windows extension builds -------------------------
       - name: Set up MSVC (Windows)
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
-      # ---- Build C extensions (Linux / macOS) -------------------------------
-      - name: Build C extensions (Linux / macOS)
-        if: runner.os != 'Windows'
-        run: |
-          mkdir -p dist/xue
-          cp xue-modules/*.py dist/xue/
-
-          cd xue-native
-
-          ARCH=$(uname -m)
-          OS=$(uname -s)
-          case "$ARCH" in
-            x86_64|amd64) SIMD="-mavx2" ;;
-            *)             SIMD="" ;;
-          esac
-          case "$OS" in
-            Darwin) CC="${CC:-clang}"; LDFLAGS="" ;;
-            *)      CC="${CC:-gcc}";   LDFLAGS="-ldl" ;;
-          esac
-
-          build_for_python() {
-            local PYTHON="$1"
-            local LABEL="$2"
-            command -v "$PYTHON" >/dev/null 2>&1 || { echo "Skipping $LABEL (not found)"; return 0; }
-
-            INC=$($PYTHON -c "import sysconfig; print(sysconfig.get_path('include'))")
-            EXT=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
-            echo "Building for $LABEL  ext=$EXT"
-
-            for src in _units_accel _autodiff_accel _tensor_accel; do
-              $CC -shared -O3 $SIMD -fPIC \
-                -I"$INC" "${src}.c" \
-                -o "../dist/xue/${src}${EXT}" \
-                -lm $LDFLAGS
-              echo "  OK: ${src}${EXT}"
-            done
-          }
-
-          build_for_python python3.12 "Python 3.12"
-          build_for_python python3.14 "Python 3.14t" || true
-
-      # ---- Build C extensions (Windows via MSVC) ----------------------------
       - name: Build C extensions (Windows)
         if: runner.os == 'Windows'
         shell: cmd
         run: |
-          mkdir dist\xue
-          copy xue-modules\*.py dist\xue\
+          set FTDEF=
+          if "%PYFT%"=="1" set FTDEF=/DPy_GIL_DISABLED=1
+          for %%s in (_units_accel _autodiff_accel _tensor_accel) do (
+            cl /nologo /LD /O2 %FTDEF% /I"%PYINC%" xue-native\%%s.c /Fo"%RUNNER_TEMP%\\" /Fe"%XUEDIR%\%%s%PYEXT%" /link /LIBPATH:"%PKG%\libs" "%PYLIB%.lib" /IMPLIB:"%RUNNER_TEMP%\%%s.lib" || exit /b 1
+          )
+          dir "%XUEDIR%"
 
-          for /f "delims=" %%i in ('python -c "import sysconfig; print(sysconfig.get_path(\"include\"))"') do set PYTHINC=%%i
-          for /f "delims=" %%i in ('python -c "import sysconfig; print(sysconfig.get_config_var(\"installed_base\"))"') do set PYTHBASE=%%i
-          for /f "delims=" %%i in ('python -c "import sysconfig; print(sysconfig.get_config_var(\"EXT_SUFFIX\"))"') do set PYEXT=%%i
-          for /f "delims=" %%i in ('python -c "import sys; print(f\"python{sys.version_info.major}{sys.version_info.minor}\")"') do set PYLIB=%%i
-
-          cd xue-native
-
-          cl /LD /O2 /nologo /I"%PYTHINC%" _units_accel.c    /Fe:"..\dist\xue\_units_accel%PYEXT%"    /link /LIBPATH:"%PYTHBASE%\libs" "%PYLIB%.lib"
-          cl /LD /O2 /nologo /I"%PYTHINC%" _autodiff_accel.c /Fe:"..\dist\xue\_autodiff_accel%PYEXT%" /link /LIBPATH:"%PYTHBASE%\libs" "%PYLIB%.lib"
-          cl /LD /O2 /nologo /I"%PYTHINC%" _tensor_accel.c   /Fe:"..\dist\xue\_tensor_accel%PYEXT%"   /link /LIBPATH:"%PYTHBASE%\libs" "%PYLIB%.lib"
-
-      # ---- Package ----------------------------------------------------------
-      - name: Package (Linux / macOS)
-        if: runner.os != 'Windows'
+      # ---- Package and test the archive --------------------------------------
+      - name: Package
         run: |
-          cp xue-guide.html xue-guide.pdf dist/ 2>/dev/null || true
-          VERSION="${GITHUB_REF_NAME:-${{ github.event.inputs.tag }}}"
-          ARCHIVE="xue-${VERSION}-${{ matrix.platform }}.tar.gz"
-          tar -czf "$ARCHIVE" -C dist .
-          shasum -a 256 "$ARCHIVE" > "$ARCHIVE.sha256"
-          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+          set -euo pipefail
+          "$PYEXE" -m compileall -q "$XUEDIR"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            ARCHIVE="$PKG.zip"; 7z a -tzip -bd "$ARCHIVE" "$PKG" >/dev/null
+            sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
+          else
+            ARCHIVE="$PKG.tar.gz"; tar -czf "$ARCHIVE" "$PKG"
+            shasum -a 256 "$ARCHIVE" > "$ARCHIVE.sha256"
+          fi
+          echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
 
-      - name: Package (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Smoke-test package
         run: |
-          Copy-Item xue-guide.html dist\ -ErrorAction SilentlyContinue
-          Copy-Item xue-guide.pdf  dist\ -ErrorAction SilentlyContinue
-          $version = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "${{ github.event.inputs.tag }}" }
-          $archive = "xue-${version}-${{ matrix.platform }}.zip"
-          Compress-Archive -Path dist\* -DestinationPath $archive
-          ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() + "  $archive") | Out-File "$archive.sha256" -Encoding ascii
-          echo "ARCHIVE=$archive" >> $env:GITHUB_ENV
+          set -euo pipefail
+          T="$RUNNER_TEMP/smoke"; rm -rf "$T"; mkdir -p "$T"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            7z x -bd "-o$T" "$ARCHIVE" >/dev/null; PY="$T/$PKG/python.exe"
+          else
+            tar -xzf "$ARCHIVE" -C "$T"; PY="$T/$PKG/bin/python3"
+          fi
+          cd "$T"
+          "$PY" -I -c "
+          import sys, sysconfig
+          import xue, xue.units, xue.tensor, xue.autodiff
+          accel = sorted(m for m in sys.modules if m.endswith('_accel'))
+          print(sys.version)
+          print('prefix:', sys.prefix)
+          print('accelerators:', accel)
+          print('start-up hook:', 'xue.sitecustomize_xue' in sys.modules)
+          print('GIL enabled:', getattr(sys, '_is_gil_enabled', lambda: True)())
+          assert len(accel) == 3, accel
+          assert 'xue.sitecustomize_xue' in sys.modules
+          assert sys.prefix.replace('\\\\', '/').rstrip('/').endswith('$PKG')
+          "
+          STDLIB=$("$PY" -I -c "import sysconfig; print(sysconfig.get_path('stdlib'))")
+          "$PY" -I -m unittest discover -s "$STDLIB/xue/tests" -t "$STDLIB"
 
-      # ---- Upload to GitHub Release -----------------------------------------
+      # ---- Artifacts (always) and GitHub Release (tags / publish=true) -------
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PKG }}
+          path: |
+            ${{ env.ARCHIVE }}
+            ${{ env.ARCHIVE }}.sha256
+          retention-days: 14
+
       - name: Upload to GitHub Release
+        if: github.event_name == 'push' || github.event.inputs.publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name || github.event.inputs.tag }}
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: |
             ${{ env.ARCHIVE }}
             ${{ env.ARCHIVE }}.sha256
