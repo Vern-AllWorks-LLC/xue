@@ -68,7 +68,8 @@ jobs:
           if command -v sha256sum >/dev/null; then got=$(cd "$RUNNER_TEMP/pbs" && sha256sum "$F" | cut -d' ' -f1)
           else got=$(cd "$RUNNER_TEMP/pbs" && shasum -a 256 "$F" | cut -d' ' -f1); fi
           [ -n "$want" ] && [ "$want" = "$got" ] || { echo "checksum mismatch for $F"; exit 1; }
-          tar -xzf "$RUNNER_TEMP/pbs/$F"
+          # Extract from inside the folder: GNU tar on Windows reads "D:..." as host:path.
+          W="$PWD"; (cd "$RUNNER_TEMP/pbs" && tar -xzf "$F" -C "$W")
           VERSION="${{ github.event.inputs.tag || github.ref_name }}"
           PKG="xue-${VERSION}-${{ matrix.target.platform }}${SUFFIX}"
           mv python "$PKG"
@@ -157,7 +158,6 @@ jobs:
           print('prefix:', sys.prefix)
           print('accelerators:', accel)
           print('start-up hook:', 'xue.sitecustomize_xue' in sys.modules)
-          import site; print('site.py:', site.__file__, 'hook present:', 'sitecustomize_xue' in open(site.__file__, encoding='utf-8').read())
           print('GIL enabled:', getattr(sys, '_is_gil_enabled', lambda: True)())
           assert len(accel) == 3, accel
           assert 'xue.sitecustomize_xue' in sys.modules
