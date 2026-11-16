@@ -213,6 +213,14 @@ answer = ask("Why is this function returning None?")
 
 ## Building for macOS, Linux & Windows
 
+### Prebuilt downloads
+
+Self-contained Xue distributions for Linux (x86_64, aarch64), macOS (Apple Silicon, Intel) and Windows (x86_64), in two flavours: CPython 3.12 (`xue-<version>-<platform>`) and free-threaded CPython 3.14t (`xue-<version>-<platform>-3.14t`). Unpack anywhere and run `bin/python3` (`python.exe` on Windows); `pip` works as usual. Download from the GitHub Release or <https://vernallworks.com/downloads.php>.
+
+**Tip:** The prebuilt C accelerators need an AVX2-capable CPU on x86_64 (2013+) and glibc 2.28+ on Linux; without them Xue falls back to pure Python.
+
+**Tip:** On the 3.14t builds the C accelerators do not yet declare free-threading support, so importing `xue.units`, `xue.autodiff` or `xue.tensor` re-enables the GIL (with a `RuntimeWarning`); the pure-Python modules run GIL-free.
+
 Xue builds from source like CPython itself — a Python interpreter cannot be cross-compiled, so build natively on each platform. The result is a relocatable interpreter tree plus the C-accelerated `units`, `autodiff` and `tensor` backends under your chosen prefix.
 
 ### Linux
@@ -257,7 +265,7 @@ PCbuild\build.bat -c Release -p x64
 
 ### Automated builds (GitHub Actions)
 
-An `ubuntu` / `macos-14` / `macos-13` / `windows` runner matrix runs `./configure && make` on Unix and `PCbuild\build.bat` on Windows, then uploads the packaged interpreter as a release artifact.
+`.github/workflows/release.yml` builds the prebuilt distributions on `ubuntu-22.04`, `ubuntu-22.04-arm`, `macos-latest`, `macos-15-intel` and `windows-latest` runners. Each starts from a relocatable CPython (python-build-standalone, checksum-verified), installs the `xue` package and the start-up hook (`tools/assemble_dist.py`), compiles the C accelerators for that interpreter, then unpacks the archive and runs the Xue test suite before uploading it.
 
 **Use case:** Ship signed per-OS Xue builds on every tagged release without maintaining build machines.
 
@@ -269,4 +277,4 @@ Full documentation: <https://vernallworks.com/docs-xue.php>
 
 ## License
 
-See the `LICENSE` file. Built on CPython (PSF License).
+See the `LICENSE.xue` file (MIT). Built on CPython (PSF License).
