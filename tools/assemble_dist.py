@@ -48,6 +48,13 @@ def main(pkg):
         src = src.replace(ANCHOR, ANCHOR + HOOK)
         with open(site_py, 'w', encoding='utf-8', newline='\n') as f:
             f.write(src)
+    # The bundled stdlib may ship unchecked-hash .pyc files, which Python
+    # would load instead of the edited source: drop and rebuild site's cache.
+    import glob
+    import py_compile
+    for pyc in glob.glob(os.path.join(stdlib, '__pycache__', 'site.*.pyc')):
+        os.remove(pyc)
+    py_compile.compile(site_py, doraise=True)
 
     for name in ('LICENSE.xue', 'xue-guide.html', 'xue-guide.pdf'):
         if os.path.exists(os.path.join(repo, name)):

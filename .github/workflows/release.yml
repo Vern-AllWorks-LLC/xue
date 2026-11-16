@@ -63,9 +63,10 @@ jobs:
           mkdir -p "$RUNNER_TEMP/pbs"
           curl -fsSL -o "$RUNNER_TEMP/pbs/$F" "$U/$F"
           curl -fsSL -o "$RUNNER_TEMP/pbs/SHA256SUMS" "$U/SHA256SUMS"
-          want=$(grep " $F\$" "$RUNNER_TEMP/pbs/SHA256SUMS" | cut -d' ' -f1)
-          if command -v sha256sum >/dev/null; then got=$(sha256sum "$RUNNER_TEMP/pbs/$F" | cut -d' ' -f1)
-          else got=$(shasum -a 256 "$RUNNER_TEMP/pbs/$F" | cut -d' ' -f1); fi
+          want=$(tr -d '\r' < "$RUNNER_TEMP/pbs/SHA256SUMS" | grep " $F\$" | cut -d' ' -f1)
+          # Hash a bare file name: GNU sha256sum escapes paths with backslashes.
+          if command -v sha256sum >/dev/null; then got=$(cd "$RUNNER_TEMP/pbs" && sha256sum "$F" | cut -d' ' -f1)
+          else got=$(cd "$RUNNER_TEMP/pbs" && shasum -a 256 "$F" | cut -d' ' -f1); fi
           [ -n "$want" ] && [ "$want" = "$got" ] || { echo "checksum mismatch for $F"; exit 1; }
           tar -xzf "$RUNNER_TEMP/pbs/$F"
           VERSION="${{ github.event.inputs.tag || github.ref_name }}"
@@ -156,6 +157,7 @@ jobs:
           print('prefix:', sys.prefix)
           print('accelerators:', accel)
           print('start-up hook:', 'xue.sitecustomize_xue' in sys.modules)
+          import site; print('site.py:', site.__file__, 'hook present:', 'sitecustomize_xue' in open(site.__file__, encoding='utf-8').read())
           print('GIL enabled:', getattr(sys, '_is_gil_enabled', lambda: True)())
           assert len(accel) == 3, accel
           assert 'xue.sitecustomize_xue' in sys.modules
