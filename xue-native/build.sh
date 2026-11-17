@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build C extensions for xue (Python 3.12 and 3.14t)
+# Build C extensions for xue (Python 3.15 and free-threaded 3.15t)
 # Cross-platform: Linux (x86_64, aarch64), macOS (x86_64, arm64)
 set -e
 
@@ -7,13 +7,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 XUE_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$SCRIPT_DIR"
 
-# Configurable Python paths (override via env vars)
-PYTHON312="${PYTHON312:-$XUE_ROOT/xue-python-install/bin/python3}"
-PYTHON314="${PYTHON314:-$XUE_ROOT/xue-python-install-314/bin/python3}"
-
-XUE_LIB312="$XUE_ROOT/xue-python/Lib/xue"
-XUE_LIB312_INST="$XUE_ROOT/xue-python-install/lib/python3.12/xue"
-XUE_LIB314="$XUE_ROOT/xue-python-install-314/lib/python3.14t/xue"
+# Interpreters to build for (override via env vars). Each must have the xue
+# package in its standard library (a xue-python install or an assembled dist);
+# the extensions are written next to it.
+PYTHON315="${PYTHON315:-$XUE_ROOT/xue-python-install-315/bin/python3}"
+PYTHON315T="${PYTHON315T:-$XUE_ROOT/xue-python-install-315t/bin/python3}"
 
 # Detect architecture for SIMD flags
 ARCH="$(uname -m)"
@@ -63,24 +61,21 @@ build_ext() {
     done
 }
 
-# Build for Python 3.12
-if [ -x "$PYTHON312" ] && [ -d "$XUE_LIB312" ]; then
-    build_ext "$PYTHON312" "$XUE_LIB312" "Python 3.12"
-    # Also copy to installed location
-    if [ -d "$XUE_LIB312_INST" ]; then
-        cp "$XUE_LIB312"/_*_accel.cpython-312*.so "$XUE_LIB312_INST/" 2>/dev/null || true
-        echo "  Copied to install: $XUE_LIB312_INST"
-    fi
-else
-    echo "Skipping Python 3.12 (not found at $PYTHON312)"
-fi
+xue_dir() {
+    "$1" -c "import os, sysconfig; print(os.path.join(sysconfig.get_path('stdlib'), 'xue'))"
+}
 
-# Build for Python 3.14t
-if [ -x "$PYTHON314" ] && [ -d "$XUE_LIB314" ]; then
-    build_ext "$PYTHON314" "$XUE_LIB314" "Python 3.14t"
-else
-    echo "Skipping Python 3.14t (not found at $PYTHON314)"
-fi
+XUE_DIRS=""
+for label_python in "Python 3.15:$PYTHON315" "Python 3.15t:$PYTHON315T"; do
+    label="${label_python%%:*}"
+    python="${label_python#*:}"
+    if [ -x "$python" ] && [ -d "$(xue_dir "$python")" ]; then
+        build_ext "$python" "$(xue_dir "$python")" "$label"
+        XUE_DIRS="$XUE_DIRS $(xue_dir "$python")"
+    else
+        echo "Skipping $label (no xue-enabled interpreter at $python)"
+    fi
+done
 
 # Build CUDA kernels (optional — Linux/macOS only, requires nvcc)
 if command -v nvcc &>/dev/null; then
@@ -94,8 +89,7 @@ if command -v nvcc &>/dev/null; then
         _xue_cuda_kernels.cu -o "_xue_cuda_kernels${CUDA_EXT}" \
         -lcudart 2>/dev/null && {
         echo "  CUDA kernels built: _xue_cuda_kernels${CUDA_EXT}"
-        [ -d "$XUE_LIB312" ] && cp "_xue_cuda_kernels${CUDA_EXT}" "$XUE_LIB312/"
-        [ -d "$XUE_LIB314" ] && cp "_xue_cuda_kernels${CUDA_EXT}" "$XUE_LIB314/"
+        for d in $XUE_DIRS; do cp "_xue_cuda_kernels${CUDA_EXT}" "$d/"; done
     } || echo "  CUDA build failed (no GPU hardware? continuing without GPU)"
 else
     echo "=== Skipping CUDA (nvcc not found) ==="
@@ -113,7 +107,7 @@ else
 fi
 
 # Verify
-for label_python in "Python 3.12:$PYTHON312" "Python 3.14t:$PYTHON314"; do
+for label_python in "Python 3.15:$PYTHON315" "Python 3.15t:$PYTHON315T"; do
     label="${label_python%%:*}"
     python="${label_python#*:}"
     [ -x "$python" ] || continue

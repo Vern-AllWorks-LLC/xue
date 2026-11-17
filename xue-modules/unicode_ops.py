@@ -13,7 +13,6 @@ Supported mappings:
     ∞  →  float('inf')
     π  →  3.141592653589793
     τ  →  6.283185307179586
-    ε  →  1e-10
 
 Usage:
     # coding: xue-unicode
@@ -30,6 +29,7 @@ Or activate globally:
 from __future__ import annotations
 import codecs
 import io
+import re
 
 # Unicode → Python source mappings
 # Only map operators, not identifiers (Python already supports Unicode identifiers)
@@ -59,11 +59,17 @@ _CONSTANT_MAP = {
 }
 
 
+# A constant is replaced only where it stands alone, so identifiers that merely
+# contain the letter (e.g. `πr`, `ατ`) are left untouched.
+_CONSTANT_RE = re.compile(
+    '(?<![\\w])(' + '|'.join(map(re.escape, _CONSTANT_MAP)) + ')(?![\\w])')
+
+
 def _translate_source(source: str) -> str:
-    """Replace Unicode operators with their Python equivalents."""
+    """Replace Unicode operators and constants with their Python equivalents."""
     for unicode_char, replacement in _OPERATOR_MAP.items():
         source = source.replace(unicode_char, replacement)
-    return source
+    return _CONSTANT_RE.sub(lambda m: _CONSTANT_MAP[m.group(1)], source)
 
 
 class XueUnicodeCodec(codecs.Codec):
