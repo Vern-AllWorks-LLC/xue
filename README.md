@@ -1,6 +1,6 @@
 # Xue
 
-Xue (xue-python) is an AI-native enhanced Python distribution from OpenCan.ai, built as a standard CPython fork of 3.12 and 3.14 (free-threaded). It ships an extra standard-library package, `xue`, with 11 modules for scientific computing, AI/ML, robotics, and safety-critical programming that stock Python lacks. All existing Python packages work unchanged; performance-critical modules (units, autodiff, tensor) automatically load C-extension backends with AVX2/NEON SIMD and optional CUDA, falling back to pure Python when unavailable.
+Xue (xue-python) is an AI-native enhanced Python distribution from OpenCan.ai, built as a standard CPython fork of 3.15 (regular and free-threaded 3.15t). It ships an extra standard-library package, `xue`, with 11 modules for scientific computing, AI/ML, robotics, and safety-critical programming that stock Python lacks. All existing Python packages work unchanged; performance-critical modules (units, autodiff, tensor) automatically load C-extension backends with AVX2/NEON SIMD and optional CUDA, falling back to pure Python when unavailable.
 
 ## Type System & Safety
 
@@ -120,7 +120,7 @@ J = jacobian(lambda v: [v[0] + v[1], v[0] * v[1]], [2.0, 3.0])
 
 ### `xue.tensor` — shape-checked tensors with SIMD + GPU
 
-N-dimensional tensors with runtime shape validation (`ShapeError` on mismatch), AVX2/NEON SIMD-accelerated elementwise ops and tiled matrix multiply, and optional CUDA GPU offload via `.to_gpu()`/`.to_cpu()`. Operations release the GIL for true parallelism on the 3.14t free-threaded build.
+N-dimensional tensors with runtime shape validation (`ShapeError` on mismatch), AVX2/NEON SIMD-accelerated elementwise ops and tiled matrix multiply, and optional CUDA GPU offload via `.to_gpu()`/`.to_cpu()`. Operations release the GIL for true parallelism on the 3.15t free-threaded build.
 
 ```python
 from xue.tensor import Tensor, float32, zeros, eye, arange
@@ -215,38 +215,40 @@ answer = ask("Why is this function returning None?")
 
 ### Prebuilt downloads
 
-Self-contained Xue distributions for Linux (x86_64, aarch64), macOS (Apple Silicon, Intel) and Windows (x86_64), in two flavours: CPython 3.12 (`xue-<version>-<platform>`) and free-threaded CPython 3.14t (`xue-<version>-<platform>-3.14t`). Unpack anywhere and run `bin/python3` (`python.exe` on Windows); `pip` works as usual. Download from the GitHub Release or <https://vernallworks.com/downloads.php>.
+Self-contained Xue distributions for Linux (x86_64, aarch64), macOS (Apple Silicon, Intel) and Windows (x86_64), in two flavours: CPython 3.15 (`xue-<version>-<platform>`) and free-threaded CPython 3.15t (`xue-<version>-<platform>-3.15t`). Unpack anywhere and run `bin/python3` (`python.exe` on Windows); `pip` works as usual. Download from the GitHub Release or <https://vernallworks.com/downloads.php>.
 
 **Tip:** The prebuilt C accelerators need an AVX2-capable CPU on x86_64 (2013+) and glibc 2.28+ on Linux; without them Xue falls back to pure Python.
 
-**Tip:** On the 3.14t builds the C accelerators do not yet declare free-threading support, so importing `xue.units`, `xue.autodiff` or `xue.tensor` re-enables the GIL (with a `RuntimeWarning`); the pure-Python modules run GIL-free.
+**Tip:** On the 3.15t builds the C accelerators do not yet declare free-threading support, so importing `xue.units`, `xue.autodiff` or `xue.tensor` re-enables the GIL (with a `RuntimeWarning`); the pure-Python modules run GIL-free.
 
-Xue builds from source like CPython itself — a Python interpreter cannot be cross-compiled, so build natively on each platform. The result is a relocatable interpreter tree plus the C-accelerated `units`, `autodiff` and `tensor` backends under your chosen prefix.
+Xue builds from source like CPython itself — a Python interpreter cannot be cross-compiled, so build natively on each platform. `tools/make_fork.sh [VERSION]` (default 3.15.2) downloads the CPython release from python.org and turns it into the `xue-python/` source tree: the `xue` package in `Lib/` and the start-up hook in `site.py`. Build that tree as below, then run `xue-native/build.sh` (or `PYTHON315=/opt/xue/bin/python3 xue-native/build.sh`) to compile the C-accelerated `units`, `autodiff` and `tensor` backends into it.
 
 ### Linux
 
 ```python
 # build deps: gcc, make, libssl/zlib/readline headers
 git clone https://github.com/Vern-AllWorks-LLC/xue.git
-cd xue/xue-python
+cd xue && tools/make_fork.sh 3.15.2 && cd xue-python
 ./configure --prefix=/opt/xue --enable-optimizations
 make -j$(nproc)
 sudo make install
+PYTHON315=/opt/xue/bin/python3 ../xue-native/build.sh
 tar -czf xue-linux-x86_64.tar.gz -C /opt xue
 ```
 
-**Tip:** Build on Ubuntu 20.04 / manylinux for broad glibc compatibility. Add `--disable-gil` for the free-threaded 3.14t build.
+**Tip:** Build on Ubuntu 20.04 / manylinux for broad glibc compatibility. Add `--disable-gil` for the free-threaded 3.15t build.
 
 ### macOS
 
 ```python
 brew install openssl readline xz
 git clone https://github.com/Vern-AllWorks-LLC/xue.git
-cd xue/xue-python
+cd xue && tools/make_fork.sh 3.15.2 && cd xue-python
 ./configure --prefix=/opt/xue --enable-optimizations \
   --with-openssl=$(brew --prefix openssl)
 make -j$(sysctl -n hw.ncpu)
 make install
+PYTHON315=/opt/xue/bin/python3 ../xue-native/build.sh
 ```
 
 **Tip:** Build separately on Apple Silicon and Intel, or pass `--enable-universalsdk --with-universal-archs=universal2` to cover both.
@@ -256,7 +258,9 @@ make install
 ```python
 :: Visual Studio 2022 with "Desktop development with C++"
 git clone https://github.com/Vern-AllWorks-LLC/xue.git
-cd xue\xue-python
+cd xue
+:: from Git Bash: tools/make_fork.sh 3.15.2
+cd xue-python
 PCbuild\build.bat -c Release -p x64
 :: interpreter + extensions land in PCbuild\amd64\
 ```
@@ -265,7 +269,7 @@ PCbuild\build.bat -c Release -p x64
 
 ### Automated builds (GitHub Actions)
 
-`.github/workflows/release.yml` builds the prebuilt distributions on `ubuntu-22.04`, `ubuntu-22.04-arm`, `macos-latest`, `macos-15-intel` and `windows-latest` runners. Each starts from a relocatable CPython (python-build-standalone, checksum-verified), installs the `xue` package and the start-up hook (`tools/assemble_dist.py`), compiles the C accelerators for that interpreter, then unpacks the archive and runs the Xue test suite before uploading it.
+`.github/workflows/release.yml` builds the prebuilt distributions on `ubuntu-22.04`, `ubuntu-22.04-arm`, `macos-latest`, `macos-15-intel` and `windows-latest` runners. Each starts from a relocatable CPython (python-build-standalone, checksum-verified), installs the `xue` package and the start-up hook (`tools/assemble_dist.py`), compiles the C accelerators for that interpreter, then unpacks the archive and runs the Xue test suite plus `tools/feature_check.py` (start-up hook, `xue-unicode` codec, `--strict`, `--llm` backends, sandbox and signing, accelerators, free-threaded stress run) before uploading it.
 
 **Use case:** Ship signed per-OS Xue builds on every tagged release without maintaining build machines.
 

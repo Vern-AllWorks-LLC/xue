@@ -23,6 +23,9 @@ Usage:
     from xue.sandbox import sandboxed_import
 """
 
-__version__ = "0.2.0"
-__based_on__ = "CPython 3.14.3"
+import sys as _sys
+
+__version__ = "1.2.0"
+__based_on__ = "CPython %d.%d.%d" % _sys.version_info[:3]
+del _sys
 __license__ = "MIT"

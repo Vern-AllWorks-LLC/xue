@@ -30,6 +30,7 @@ import sys
 import types
 import builtins
 import importlib
+import importlib.util
 import typing as _t
 import os
 import hashlib

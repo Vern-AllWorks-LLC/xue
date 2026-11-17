@@ -45,6 +45,14 @@ class TestTranslation(unittest.TestCase):
         src = "\u03b1 = 0.01"  # α = 0.01
         self.assertEqual(_translate_source(src), src)
 
+    def test_pi_tau_constants(self):
+        self.assertEqual(_translate_source("2 * \u03c0 * r"), "2 * 3.141592653589793 * r")
+        self.assertEqual(_translate_source("\u03c4/2"), "6.283185307179586/2")
+
+    def test_constants_inside_identifiers_preserved(self):
+        for src in ("\u03c0r = 1", "\u03b1\u03c4 = 2", "x_\u03c0 = 3"):
+            self.assertEqual(_translate_source(src), src)
+
 
 class TestCodecRegistration(unittest.TestCase):
     def test_register(self):

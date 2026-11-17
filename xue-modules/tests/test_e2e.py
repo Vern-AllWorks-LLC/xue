@@ -757,6 +757,32 @@ class TestSandboxE2E(unittest.TestCase):
 # E2E: xue.unicode_ops
 # ============================================================
 
+class TestPackageSigningE2E(unittest.TestCase):
+    """Trusted-hash package verification (sandbox.require_signed)."""
+
+    def test_require_signed(self):
+        import tempfile, os, sys, importlib
+        from xue.sandbox import (_compute_package_hash, register_trusted_hash,
+                                 require_signed, verify_package, SignatureError)
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "xue_signed_demo.py"), "w") as f:
+                f.write("VALUE = 1\n")
+            sys.path.insert(0, d)
+            try:
+                importlib.invalidate_caches()
+                path = os.path.join(d, "xue_signed_demo.py")
+                register_trusted_hash("xue_signed_demo", _compute_package_hash(path))
+                require_signed("xue_signed_demo")
+                self.assertTrue(verify_package("xue_signed_demo"))
+                register_trusted_hash("xue_signed_demo", "0" * 64)
+                with self.assertRaises(SignatureError):
+                    require_signed("xue_signed_demo")
+                with self.assertRaises(SignatureError):
+                    require_signed("xue_never_registered")
+            finally:
+                sys.path.remove(d)
+
+
 class TestUnicodeOpsE2E(unittest.TestCase):
     """Real-world Unicode operator usage."""
 
