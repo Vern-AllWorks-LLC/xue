@@ -50,4 +50,21 @@ open(path, 'w', encoding='utf-8').write(src)
 print("patched", path)
 EOF
 
+# `make install` copies only the stdlib directories listed in LIBSUBDIRS
+# (POSIX builds; Windows' PCbuild layout picks up Lib/ wholesale).
+python3 - xue-python/Makefile.pre.in <<'EOF'
+import sys
+path = sys.argv[1]
+src = open(path, encoding='utf-8').read()
+anchor = "LIBSUBDIRS=\t"
+if anchor not in src:
+    sys.exit("Makefile.pre.in: LIBSUBDIRS not found; add xue and xue/tests to it by hand")
+if "\t\txue xue/tests \\\n" not in src:
+    i = src.index(anchor) + len(anchor)
+    j = src.index("\n", i) + 1          # after the first entry's line
+    src = src[:j] + "\t\txue xue/tests \\\n" + src[j:]
+    open(path, 'w', encoding='utf-8').write(src)
+print("patched", path)
+EOF
+
 echo "xue-python/ is CPython $VERSION + Xue. Build it with ./configure && make (add --disable-gil for free-threaded)."
